@@ -10,6 +10,17 @@ const wss = new WebSocket.Server({ server });
 
 // Store rooms and their members
 const rooms = new Map();
+const clientId = new Map();
+
+function createCLientId() {
+  let id = Math.floor(Math.random() * 1000000);
+
+  while (clientId.has(id)) {
+    id = Math.floor(Math.random() * 1000000);
+  }
+
+  return id;
+}
 
 // Store which room each client is in
 const clientRooms = new Map();
@@ -114,6 +125,7 @@ function handleMessage(ws, data) {
       roomId,
       data: data.data,
       timestamp: Date.now(),
+      clientId: ws._socket.remoteAddress,
     },
     ws
   );
