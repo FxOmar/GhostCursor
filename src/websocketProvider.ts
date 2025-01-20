@@ -3,6 +3,7 @@ export class WebSocketProvider {
   protected currentRoom: string | null;
   protected connectionPromise: Promise<void> | null;
   protected messageHandlers: Map<any, any>;
+  protected username: string | null;
 
   constructor(private serverUrl: string) {
     this.serverUrl = serverUrl;
@@ -10,6 +11,7 @@ export class WebSocketProvider {
     this.currentRoom = null;
     this.messageHandlers = new Map();
     this.connectionPromise = null;
+    this.username = null;
   }
 
   // Connect to WebSocket server
@@ -55,8 +57,10 @@ export class WebSocketProvider {
   }
 
   // Join a specific room
-  async joinRoom(roomId: string) {
+  async joinRoom(roomId: string, username: string) {
     await this.connect();
+
+    this.username = username;
 
     if (this.currentRoom) {
       await this.leaveRoom();
@@ -65,6 +69,7 @@ export class WebSocketProvider {
     const joinMessage = {
       type: 'join',
       roomId: roomId,
+      username: username,
     };
 
     if (this.socket) {
@@ -75,7 +80,7 @@ export class WebSocketProvider {
 
     this.currentRoom = roomId;
 
-    console.log(`Joined room: ${roomId}`);
+    console.log(`Joined room: ${roomId} as ${username}`);
   }
 
   // Leave the current room
@@ -130,8 +135,9 @@ export class WebSocketProvider {
     }
   }
   // Disconnect from the WebSocket server
-  disconnect() {
+  disconnect(callback: () => void) {
     if (this.socket) {
+      callback();
       this.socket.close();
       this.socket = null;
       this.currentRoom = null;

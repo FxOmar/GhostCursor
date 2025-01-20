@@ -3,22 +3,46 @@ import './style.css';
 import { WebSocketProvider } from './websocketProvider';
 import { Mouse } from './mouse';
 
-let clientId: string | null = null;
+const username = createRandomUserName();
 let cursors = new Map();
 
 function randomColor() {
   return `hsl(${Math.random() * 360}, 100%, 50%)`;
 }
 
-const color = randomColor();
+function createRandomUserName() {
+  const adjectives = [
+    'happy',
+    'sad',
+    'angry',
+    'sleepy',
+    'hungry',
+    'thirsty',
+    'bored',
+    'excited',
+    'tired',
+    'silly',
+  ];
 
-function Cursor(color: string) {
-  return `
-    <svg id="cursor" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="8 0 16 8 8 16 0 8 8 0" fill="${color}"/>
-    </svg>
-  `;
+  const animals = [
+    'dog',
+    'cat',
+    'bird',
+    'fish',
+    'rabbit',
+    'hamster',
+    'turtle',
+    'parrot',
+    'snake',
+    'lizard',
+  ];
+
+  return `${adjectives[Math.floor(Math.random() * adjectives.length)]}_${
+    animals[Math.floor(Math.random() * animals.length)]
+  }`;
 }
+
+const color = randomColor();
 
 function createCursorSVG(color: string) {
   return `
@@ -56,21 +80,21 @@ function createCursorElement(cursorData: CursorData) {
 
 function updateCursors(cursorList: CursorData[]) {
   // Remove cursors that are no longer present
-  for (const [id, element] of cursors.entries()) {
-    if (!cursorList.find((c) => c.clientId === id)) {
+  for (const [username, element] of cursors.entries()) {
+    if (!cursorList.find((c) => c.username === username)) {
       element.remove();
-      cursors.delete(id);
+      cursors.delete(username);
     }
   }
 
   // Update or create cursors
   cursorList.forEach((cursorData) => {
-    if (cursorData.clientId !== clientId) {
-      let cursorElement = cursors.get(cursorData.clientId);
+    if (cursorData.username !== username) {
+      let cursorElement = cursors.get(cursorData.username);
 
       if (!cursorElement) {
         cursorElement = createCursorElement(cursorData);
-        cursors.set(cursorData.clientId, cursorElement);
+        cursors.set(cursorData.username, cursorElement);
       }
 
       cursorElement.style.transform = `translate(${cursorData.x}px, ${cursorData.y}px)`;
@@ -80,17 +104,17 @@ function updateCursors(cursorList: CursorData[]) {
   });
 }
 
-const socket = new WebSocketProvider('ws://83a1-173-239-236-76.ngrok-free.app');
+const socket = new WebSocketProvider(
+  'ws://670a-103-251-201-202.ngrok-free.app'
+);
 
 const mouse = new Mouse();
 
 // generate random x/y coordinates for the cursor
 
-const cursor = Cursor(color);
-document.body.innerHTML += cursor;
-
-socket.joinRoom('default').then(async () => {
+socket.joinRoom('default', username).then(async () => {
   await socket.sendMessage({
+    username: username,
     x: Math.random() * window.innerWidth,
     y: Math.random() * window.innerHeight,
   });
@@ -99,14 +123,18 @@ socket.joinRoom('default').then(async () => {
 const cursorElement = document.getElementById('cursor');
 
 mouse.observeMouse(async (pos) => {
-  await socket.sendMessage(pos);
+  await socket.sendMessage({ username, x: pos.x, y: pos.y });
 });
 
-socket.onMessage('message', ({ data, clientId }) => {
-  console.log(data, clientId);
-  if (cursorElement) {
-    cursorElement.style.transform = `translate(${data.x - 8}px, ${
-      data.y - 2
-    }px)`;
+socket.onMessage('message', (data) => {
+  console.log(data);
+  if (data.username !== username) {
+    updateCursors(data.data);
   }
+});
+
+window.addEventListener('beforeunload', () => {
+  socket.disconnect(() => {
+    socket.sendMessage({ type: 'disconnect', username });
+  });
 });

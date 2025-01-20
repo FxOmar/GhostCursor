@@ -11,8 +11,9 @@ const wss = new WebSocket.Server({ server });
 // Store rooms and their members
 const rooms = new Map();
 const clientId = new Map();
+const clients = new Map();
 
-function createCLientId() {
+function createClientId() {
   let id = Math.floor(Math.random() * 1000000);
 
   while (clientId.has(id)) {
@@ -34,10 +35,13 @@ wss.on('connection', (ws) => {
 
       switch (data.type) {
         case 'join':
-          handleJoinRoom(ws, data.roomId);
+          handleJoinRoom(ws, data.roomId, data.username, data.x, data.y);
           break;
         case 'message':
           handleMessage(ws, data);
+          break;
+        case 'disconnect':
+          handleClientDisconnection(ws, data);
           break;
         default:
           console.log('Unknown message type:', data.type);
@@ -57,11 +61,12 @@ wss.on('connection', (ws) => {
   });
 });
 
-function handleJoinRoom(ws, roomId) {
+function handleJoinRoom(ws, roomId, username, x, y) {
   // Leave current room if client is in one
   if (clientRooms.has(ws)) {
     const currentRoomId = clientRooms.get(ws);
     const currentRoom = rooms.get(currentRoomId);
+
     if (currentRoom) {
       currentRoom.delete(ws);
       if (currentRoom.size === 0) {
@@ -77,8 +82,11 @@ function handleJoinRoom(ws, roomId) {
 
   // Add client to room
   const room = rooms.get(roomId);
+
   room.add(ws);
   clientRooms.set(ws, roomId);
+
+  clients.set(username, { username, x, y, ws });
 
   // Notify client of successful join
   ws.send(
@@ -87,6 +95,7 @@ function handleJoinRoom(ws, roomId) {
       message: `Joined room ${roomId}`,
       roomId: roomId,
       clientCount: room.size,
+      username: username,
     })
   );
 
@@ -95,19 +104,22 @@ function handleJoinRoom(ws, roomId) {
     roomId,
     {
       type: 'system',
-      message: 'New client joined the room',
+      message: `${username} joined the room`,
       clientCount: room.size,
+      username: username,
+      users: Array.from(room).map((client) => clients.get(client)),
     },
     ws
   );
 
   console.log(
-    `Client joined room ${roomId}. Total clients in room: ${room.size}`
+    `Client joined room ${roomId} as ${username}. Total clients in room: ${room.size}`
   );
 }
 
-function handleMessage(ws, data) {
+function handleMessage(ws, { data }) {
   const roomId = clientRooms.get(ws);
+
   if (!roomId) {
     ws.send(
       JSON.stringify({
@@ -118,20 +130,24 @@ function handleMessage(ws, data) {
     return;
   }
 
+  clients.set(data.username, { username: data.username, x: data.x, y: data.y });
+
+  console.log(clients.get(data.username), data);
+
   broadcastToRoom(
     roomId,
     {
       type: 'message',
       roomId,
-      data: data.data,
+      data: Array.from(clients.values()),
       timestamp: Date.now(),
-      clientId: ws._socket.remoteAddress,
     },
     ws
   );
 }
 
-function handleClientDisconnection(ws) {
+function handleClientDisconnection(ws, username = null) {
+  console.log('Client disconnected', ws);
   const roomId = clientRooms.get(ws);
   if (roomId) {
     const room = rooms.get(roomId);
@@ -145,10 +161,20 @@ function handleClientDisconnection(ws) {
           type: 'system',
           message: 'A client has left the room',
           clientCount: room.size,
+          users: Array.from(room).map((client) => {
+            const username = Array.from(clients.keys()).find(
+              (key) => clients.get(key).ws === client
+            );
+            return clients.get(username);
+          }),
         });
       }
     }
     clientRooms.delete(ws);
+
+    if (username) {
+      clients.delete(username);
+    }
   }
   console.log('Client disconnected');
 }
