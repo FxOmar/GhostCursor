@@ -6,10 +6,6 @@ import { Mouse } from './mouse';
 const username = createRandomUserName();
 let cursors = new Map();
 
-function randomColor() {
-  return `hsl(${Math.random() * 360}, 100%, 50%)`;
-}
-
 function createRandomUserName() {
   const adjectives = [
     'happy',
@@ -42,8 +38,6 @@ function createRandomUserName() {
   }`;
 }
 
-const color = randomColor();
-
 function createCursorSVG(color: string) {
   return `
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -65,7 +59,7 @@ function createCursorElement(cursorData: CursorData) {
   cursor.className = 'cursor';
 
   // Insert the SVG cursor
-  cursor.innerHTML = createCursorSVG(color);
+  cursor.innerHTML = createCursorSVG(cursorData.color);
 
   const label = document.createElement('div');
   label.className = 'cursor-label';
@@ -123,7 +117,11 @@ socket.joinRoom('default', username).then(async () => {
 const cursorElement = document.getElementById('cursor');
 
 mouse.observeMouse(async (pos) => {
-  await socket.sendMessage({ username, x: pos.x, y: pos.y });
+  await socket.sendMessage({
+    username,
+    x: pos.x,
+    y: pos.y,
+  });
 });
 
 socket.onMessage('message', (data) => {

@@ -23,6 +23,10 @@ function createClientId() {
   return id;
 }
 
+function randomColor() {
+  return `hsl(${Math.random() * 360}, 100%, 50%)`;
+}
+
 // Store which room each client is in
 const clientRooms = new Map();
 
@@ -86,8 +90,9 @@ function handleJoinRoom(ws, roomId, username, x, y) {
   room.add(ws);
   clientRooms.set(ws, roomId);
 
-  clients.set(username, { username, x, y, ws });
+  clients.set(username, { username, x, y, color: randomColor(), ws });
 
+  console.log('clients', clients.get(username));
   // Notify client of successful join
   ws.send(
     JSON.stringify({
@@ -130,9 +135,14 @@ function handleMessage(ws, { data }) {
     return;
   }
 
-  clients.set(data.username, { username: data.username, x: data.x, y: data.y });
+  const color = clients.get(data.username).color;
 
-  console.log(clients.get(data.username), data);
+  clients.set(data.username, {
+    username: data.username,
+    x: data.x,
+    y: data.y,
+    color,
+  });
 
   broadcastToRoom(
     roomId,
