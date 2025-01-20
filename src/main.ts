@@ -65,7 +65,7 @@ function createCursorElement(cursorData: CursorData) {
   cursor.className = 'cursor';
 
   // Insert the SVG cursor
-  cursor.innerHTML = createCursorSVG(cursorData.color);
+  cursor.innerHTML = createCursorSVG(color);
 
   const label = document.createElement('div');
   label.className = 'cursor-label';
