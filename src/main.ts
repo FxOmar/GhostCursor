@@ -1,36 +1,36 @@
-import './style.css';
+import "./style.css";
 
-import { WebSocketProvider } from './websocketProvider';
-import { Mouse } from './mouse';
+import { WebSocketProvider } from "./websocketProvider";
+import { Mouse } from "./mouse";
 
 const username = createRandomUserName();
 let cursors = new Map();
 
 function createRandomUserName() {
   const adjectives = [
-    'happy',
-    'sad',
-    'angry',
-    'sleepy',
-    'hungry',
-    'thirsty',
-    'bored',
-    'excited',
-    'tired',
-    'silly',
+    "happy",
+    "sad",
+    "angry",
+    "sleepy",
+    "hungry",
+    "thirsty",
+    "bored",
+    "excited",
+    "tired",
+    "silly",
   ];
 
   const animals = [
-    'dog',
-    'cat',
-    'bird',
-    'fish',
-    'rabbit',
-    'hamster',
-    'turtle',
-    'parrot',
-    'snake',
-    'lizard',
+    "dog",
+    "cat",
+    "bird",
+    "fish",
+    "rabbit",
+    "hamster",
+    "turtle",
+    "parrot",
+    "snake",
+    "lizard",
   ];
 
   return `${adjectives[Math.floor(Math.random() * adjectives.length)]}_${
@@ -55,14 +55,14 @@ interface CursorData {
 }
 
 function createCursorElement(cursorData: CursorData) {
-  const cursor = document.createElement('div');
-  cursor.className = 'cursor';
+  const cursor = document.createElement("div");
+  cursor.className = "cursor";
 
   // Insert the SVG cursor
   cursor.innerHTML = createCursorSVG(cursorData.color);
 
-  const label = document.createElement('div');
-  label.className = 'cursor-label';
+  const label = document.createElement("div");
+  label.className = "cursor-label";
   label.textContent = cursorData.username;
   label.style.background = cursorData.color;
 
@@ -92,29 +92,23 @@ function updateCursors(cursorList: CursorData[]) {
       }
 
       cursorElement.style.transform = `translate(${cursorData.x}px, ${cursorData.y}px)`;
-      cursorElement.querySelector('.cursor-label').textContent =
+      cursorElement.querySelector(".cursor-label").textContent =
         cursorData.username;
     }
   });
 }
 
-const socket = new WebSocketProvider(
-  'ws://670a-103-251-201-202.ngrok-free.app'
-);
+const socket = new WebSocketProvider("http://localhost:8080");
 
 const mouse = new Mouse();
 
-// generate random x/y coordinates for the cursor
-
-socket.joinRoom('default', username).then(async () => {
+socket.joinRoom("default", username).then(async () => {
   await socket.sendMessage({
     username: username,
     x: Math.random() * window.innerWidth,
     y: Math.random() * window.innerHeight,
   });
 });
-
-const cursorElement = document.getElementById('cursor');
 
 mouse.observeMouse(async (pos) => {
   await socket.sendMessage({
@@ -124,15 +118,14 @@ mouse.observeMouse(async (pos) => {
   });
 });
 
-socket.onMessage('message', (data) => {
-  console.log(data);
+socket.onMessage("message", (data) => {
   if (data.username !== username) {
     updateCursors(data.data);
   }
 });
 
-window.addEventListener('beforeunload', () => {
+window.addEventListener("beforeunload", () => {
   socket.disconnect(() => {
-    socket.sendMessage({ type: 'disconnect', username });
+    socket.sendMessage({ type: "disconnect", username });
   });
 });

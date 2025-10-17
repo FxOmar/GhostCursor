@@ -135,7 +135,9 @@ function handleMessage(ws, { data }) {
     return;
   }
 
-  const color = clients.get(data.username).color;
+  const color = clients.has(data.username)
+    ? clients.get(data.username).color
+    : randomColor();
 
   clients.set(data.username, {
     username: data.username,
@@ -182,9 +184,7 @@ function handleClientDisconnection(ws, username = null) {
     }
     clientRooms.delete(ws);
 
-    if (username) {
-      clients.delete(username);
-    }
+    clients.clear();
   }
   console.log('Client disconnected');
 }
